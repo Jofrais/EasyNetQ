@@ -8,28 +8,46 @@ namespace EasyNetQ;
 /// </summary>
 public static class RabbitHutch
 {
-    /// <summary>
-    /// Registers a new instance of <see cref="RabbitBus"/>.
-    /// </summary>
-    /// <param name="services">
-    /// the service collection to register the bus in.
-    /// </param>
-    /// <param name="connectionString">
-    /// The EasyNetQ connection string. Example:
-    /// host=192.168.1.1;port=5672;virtualHost=MyVirtualHost;username=MyUsername;password=MyPassword;requestedHeartbeat=10
-    ///
-    /// The following default values will be used if not specified:
-    /// host=localhost;port=5672;virtualHost=/;username=guest;password=guest;requestedHeartbeat=10
-    /// </param>
-    public static IEasyNetQBuilder AddEasyNetQ(this IServiceCollection services, string connectionString)
+    ///  <summary>
+    ///  Registers a new instance of <see cref="RabbitBus"/>.
+    ///  </summary>
+    ///  <param name="services">
+    ///  the service collection to register the bus in.
+    ///  </param>
+    ///  <param name="connectionString">
+    ///  The EasyNetQ connection string. Example:
+    ///  host=192.168.1.1;port=5672;virtualHost=MyVirtualHost;username=MyUsername;password=MyPassword;requestedHeartbeat=10
+    ///  The following default values will be used if not specified:
+    ///  host=localhost;port=5672;virtualHost=/;username=guest;password=guest;requestedHeartbeat=10
+    ///  </param>
+    ///  <param name="serviceKeyName">
+    ///  The name of the connection. This is used to identify the connection when using multiple connections.
+    ///  </param>
+    public static IEasyNetQBuilder AddEasyNetQ(this IServiceCollection services, string connectionString, string? serviceKeyName = null)
     {
-        services.RegisterDefaultServices(
-            s =>
-            {
-                var connectionStringParser = s.GetRequiredService<IConnectionStringParser>();
-                return connectionStringParser.Parse(connectionString);
-            }
-        );
+        if (serviceKeyName == null)
+        {
+            services.RegisterDefaultServices(
+                s =>
+                {
+                    var connectionStringParser = s.GetRequiredService<IConnectionStringParser>();
+                    return connectionStringParser.Parse(connectionString);
+                }
+            );
+        }
+        else
+        {
+            services.RegisterDefaultServicesKey(serviceKeyName,
+                s =>
+                {
+                    var connectionStringParser = s.GetRequiredService<IConnectionStringParser>();
+                    return connectionStringParser.Parse(connectionString);
+                }
+            );
+        }
+
+
+
         return new EasyNetQBuilder(services);
     }
 
@@ -38,7 +56,9 @@ public static class RabbitHutch
     /// </summary>
     public static IEasyNetQBuilder AddEasyNetQ(this IServiceCollection services)
     {
+
         services.RegisterDefaultServices(_ => new ConnectionConfiguration());
+
         return new EasyNetQBuilder(services);
     }
 
@@ -49,16 +69,34 @@ public static class RabbitHutch
     /// </param>
     /// <param name="services">
     /// </param>
-    public static IEasyNetQBuilder AddEasyNetQ(this IServiceCollection services, Action<ConnectionConfiguration> configurator)
+    /// <param name="serviceKeyName">
+    /// The name of the connection. This is used to identify the connection when using multiple connections.
+    /// </param>
+    public static IEasyNetQBuilder AddEasyNetQ(this IServiceCollection services, Action<ConnectionConfiguration> configurator, string? serviceKeyName = null)
     {
-        services.RegisterDefaultServices(
-            _ =>
-            {
-                var configuration = new ConnectionConfiguration();
-                configurator(configuration);
-                return configuration;
-            }
-        );
+        if(serviceKeyName == null)
+        {
+            services.RegisterDefaultServices(
+                _ =>
+                {
+                    var configuration = new ConnectionConfiguration();
+                    configurator(configuration);
+                    return configuration;
+                }
+            );
+        }
+        else
+        {
+            services.RegisterDefaultServicesKey(serviceKeyName,
+                _ =>
+                {
+                    var configuration = new ConnectionConfiguration();
+                    configurator(configuration);
+                    return configuration;
+                }
+            );
+        }
+
         return new EasyNetQBuilder(services);
     }
 }
